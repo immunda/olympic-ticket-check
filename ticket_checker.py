@@ -12,7 +12,7 @@ SMTP_HOST = 'localhost'
 TICKET_URL = 'http://www.tickets.london2012.com/'
 GET_VARS = {
     'form': 'search',
-    'tab': 'para',  # For Olympic events, use parap for Paralympic
+    'tab': 'oly',  # For Olympic events, use parap for Paralympic
     'sport': '',
     'venue': 'loc_1',  # Olympic park
     'fromDate': '',
