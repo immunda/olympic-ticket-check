@@ -12,7 +12,7 @@ SMTP_HOST = 'localhost'
 TICKET_URL = 'http://www.tickets.london2012.com/'
 GET_VARS = {
     'form': 'search',
-    'tab': 'oly',
+    'tab': 'para',  # For Olympic events, use parap for Paralympic
     'sport': '',
     'venue': 'loc_1',  # Olympic park
     'fromDate': '',
@@ -34,29 +34,41 @@ def send_alert(event_datetime, event_url, event_type):
     server.quit()
 
 
+def get_search_page(offset=0):
+    get_var_list = ['%s=%s' % (key, value) for key, value in GET_VARS.items()]
+    get_str = '&'.join(get_var_list)
+    search_page = requests.get('%sbrowse?%s&offset=%s' % (TICKET_URL, get_str, offset)).content
+    return search_page
+
+
 def search_events():
     conn = sqlite3.connect('events.db')
     cur = conn.cursor()
 
-    get_var_list = ['%s=%s' % (key, value) for key, value in GET_VARS.items()]
-    get_str = '&'.join(get_var_list)
-    search_page = requests.get('%sbrowse?%s' % (TICKET_URL, get_str)).content
+    search_page = get_search_page()
     soup = BeautifulSoup(search_page)
-
-    num_sessions_text = soup.find('div', attrs={'class': 'mgBot10 searchPagi'}).contents[2]
-    num_sessions = num_sessions_text.split('sessions')[0].split()[-1]
-    further_pages = int(num_sessions) / 10
 
     search_table = soup.find('tbody')
     search_rows = search_table.findAll('tr')
 
-    search_events = {}
-    for row in search_rows[::2]:  # Get every other row, excludes dividers
+    num_sessions_text = soup.find('div', attrs={'class': 'mgBot10 searchPagi'}).contents[2]
+    num_sessions = num_sessions_text.split('sessions')[0].split()[-1]
+    for offset in range(10, int(num_sessions), 10):  # Get further pages
+        search_page = get_search_page(offset)
+        more_soup = BeautifulSoup(search_page)
+        search_table = more_soup.find('tbody')
+        search_rows.extend(search_table.findAll('tr'))
+
+    search_events = {}  # [::2]
+
+    for row in search_rows:  # Get every other row, excludes dividers
+        if row.find('td', attrs={'class': 'edp_chopDiv'}):  # Divider row
+            continue
         try:
             event_url_id = row.find('td', attrs={'headers': 'select'}).find('input', attrs={'name': 'id'})['value']
         except TypeError:  # Caused it there's a problem getting the ID, can be if the event is not available
             continue
-        event_datetime = row.find('td', attrs={'headers': 'date_time'}).find('a').string    
+        event_datetime = row.find('td', attrs={'headers': 'date_time'}).find('a').string
         event_url = '%seventdetails?id=%s' % (TICKET_URL, row.find('td', attrs={'headers': 'select'}).find('input', attrs={'name': 'id'})['value'])
         event_type = row.find('td', attrs={'headers': 'sports'}).find('a').string
 
