@@ -52,13 +52,18 @@ def search_events():
 
     search_events = {}
     for row in search_rows[::2]:  # Get every other row, excludes dividers
-        event_datetime = row.find('td', attrs={'headers': 'date_time'}).find('a').string
+        try:
+            event_url_id = row.find('td', attrs={'headers': 'select'}).find('input', attrs={'name': 'id'})['value']
+        except TypeError:  # Caused it there's a problem getting the ID, can be if the event is not available
+            continue
+        event_datetime = row.find('td', attrs={'headers': 'date_time'}).find('a').string    
         event_url = '%seventdetails?id=%s' % (TICKET_URL, row.find('td', attrs={'headers': 'select'}).find('input', attrs={'name': 'id'})['value'])
         event_type = row.find('td', attrs={'headers': 'sports'}).find('a').string
 
         session_meta = str(row.find('td', attrs={'headers': 'session'}))
         # Grab session code
         event_code = session_meta.split('Session Code:')[1].split()[0]
+        print event_code
         search_events[event_code] = (event_datetime, event_url, event_type)
 
     test_events = {
