@@ -1,2 +1,3 @@
 events.db
+local_settings.py
 *.pyc

@@ -1,7 +1,14 @@
 import requests
 from BeautifulSoup import BeautifulSoup
 import sqlite3
+import smtplib
+from email.mime.text import MIMEText
 
+from local_settings import *
+
+SMTP_HOST = 'localhost'
+#EMAIL_SENDER = ''
+#EMAIL_RECIPIENTS = []
 TICKET_URL = 'http://www.tickets.london2012.com/'
 GET_VARS = {
     'form': 'search',
@@ -18,8 +25,13 @@ GET_VARS = {
 
 
 def send_alert(event_datetime, event_url, event_type):
-    message = "Whoop! A %s event at %s just became available! Go look at %s" % (event_type, event_datetime, event_url)
-    print message
+    message = MIMEText("Go, go, go! A %s event on %s just became available! Go look at %s" % (event_type, event_datetime, event_url), 'plain')
+    message['Subject'] = 'New event available!'
+    message['From'] = EMAIL_SENDER
+    message['To'] = ', '.join(EMAIL_RECIPIENTS)
+    server = smtplib.SMTP(SMTP_HOST)
+    server.sendmail(EMAIL_SENDER, EMAIL_RECIPIENTS, message.as_string())
+    server.quit()
 
 
 def search_events():
@@ -46,9 +58,9 @@ def search_events():
         search_events[event_code] = (event_datetime, event_url, event_type)
 
     test_events = {
-        'AB123': ('Blah', '09 Tralal 2012', ''),
-        'XY987': ('Rah', '12 Trololo 2012', ''),
-        'ZZ567': ('Blergh', 'Some time 2012', ''),
+        'AB123': ('09 Tralal 2012', '', 'Blah'),
+        'XY987': ('12 Trololo 2012', '', 'Rah'),
+        'ZZ567': ('Some time 2012', '', 'Blergh'),
     }
     #search_events = test_events
 
@@ -56,7 +68,6 @@ def search_events():
 
     prev_in_search = [event_code for event_code, in_search in recorded_events if in_search == 1]
     prev_not_search = [event_code for event_code, in_search in recorded_events if in_search == 0]
-    # "SELECT * FROM events WHERE event_code='%s'" % event_code
 
     # New events
     for event_code in search_events:
