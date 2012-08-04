@@ -25,7 +25,7 @@ GET_VARS = {
 
 
 def send_alert(event_datetime, event_url, event_type):
-    message = MIMEText("Go, go, go! A %s event on %s just became available! Go look at %s" % (event_type, event_datetime, event_url), 'plain')
+    message = MIMEText("Go, go, go! A(n) %s event on %s just became available! Go look at %s" % (event_type, event_datetime, event_url), 'plain')
     message['Subject'] = 'New event available!'
     message['From'] = EMAIL_SENDER
     message['To'] = ', '.join(EMAIL_RECIPIENTS)
@@ -59,7 +59,7 @@ def search_events():
         search_table = more_soup.find('tbody')
         search_rows.extend(search_table.findAll('tr'))
 
-    search_events = {}  # [::2]
+    search_events = {}
 
     for row in search_rows:  # Get every other row, excludes dividers
         if row.find('td', attrs={'class': 'edp_chopDiv'}):  # Divider row
@@ -95,7 +95,6 @@ def search_events():
         if event_code not in [recorded_event_code for recorded_event_code, in_search in recorded_events]:
             send_alert(*search_events[event_code])
             cur.execute("INSERT INTO events VALUES ('%s', 1)" % event_code)
-            # new_events.append(event_code)
 
     # Events that weren't in the previous search
     for event_code in prev_not_search:
