@@ -43,6 +43,10 @@ def search_events():
     search_page = requests.get('%sbrowse?%s' % (TICKET_URL, get_str)).content
     soup = BeautifulSoup(search_page)
 
+    num_sessions_text = soup.find('div', attrs={'class': 'mgBot10 searchPagi'}).contents[2]
+    num_sessions = num_sessions_text.split('sessions')[0].split()[-1]
+    further_pages = int(num_sessions) / 10
+
     search_table = soup.find('tbody')
     search_rows = search_table.findAll('tr')
 
