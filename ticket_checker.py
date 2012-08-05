@@ -3,9 +3,17 @@ from BeautifulSoup import BeautifulSoup
 import sqlite3
 import smtplib
 from email.mime.text import MIMEText
+import os
+import time
 
 from local_settings import *
 
+DEBUG = True
+CHECK_INTERVAL_SECONDS = 30
+DATABASE_NAME = 'events.db'
+#HEADLESS = False  # Will email alerts for events, if not, opens links in Safari
+BROWSER_APP = '/Applications/Safari.app'
+#SEND_ALERTS = False
 IGNORE_ORBIT_EVENTS = True
 SMTP_HOST = 'localhost'
 #EMAIL_SENDER = ''
@@ -25,14 +33,20 @@ GET_VARS = {
 }
 
 
+def open_link(event_datetime, event_url, event_type):
+    if HEADLESS == False:
+        os.system('open -a %s %s' % (BROWSER_APP, event_url))
+
+
 def send_alert(event_datetime, event_url, event_type):
-    message = MIMEText("Go, go, go! A(n) %s event on %s just became available! Go look at %s" % (event_type, event_datetime, event_url), 'plain')
-    message['Subject'] = 'New event available!'
-    message['From'] = EMAIL_SENDER
-    message['To'] = ', '.join(EMAIL_RECIPIENTS)
-    server = smtplib.SMTP(SMTP_HOST)
-    server.sendmail(EMAIL_SENDER, EMAIL_RECIPIENTS, message.as_string())
-    server.quit()
+    if HEADLESS == True:
+        message = MIMEText("Go, go, go! A(n) %s event on %s just became available! Go look at %s" % (event_type, event_datetime, event_url), 'plain')
+        message['Subject'] = 'New event available!'
+        message['From'] = EMAIL_SENDER
+        message['To'] = ', '.join(EMAIL_RECIPIENTS)
+        server = smtplib.SMTP(SMTP_HOST)
+        server.sendmail(EMAIL_SENDER, EMAIL_RECIPIENTS, message.as_string())
+        server.quit()
 
 
 def get_search_page(offset=0):
@@ -43,7 +57,7 @@ def get_search_page(offset=0):
 
 
 def search_events():
-    conn = sqlite3.connect('events.db')
+    conn = sqlite3.connect(DATABASE_NAME)
     cur = conn.cursor()
 
     search_page = get_search_page()
@@ -84,7 +98,8 @@ def search_events():
         can_add_to_basket = event_soup.find('button', attrs={'id': 'add_to_list'})
         if int(ticket_limit) == 0 or can_add_to_basket is None:  # If there's 0 available tickets for event, ignore
             continue
-        print '%s - %s' % (event_code, event_url)
+        if DEBUG == True:
+            print '%s - %s' % (event_code, event_url)
         search_events[event_code] = (event_datetime, event_url, event_type)
 
     test_events = {
@@ -102,12 +117,14 @@ def search_events():
     # New events
     for event_code in search_events:
         if event_code not in [recorded_event_code for recorded_event_code, in_search in recorded_events]:
+            open_link(*search_events[event_code])
             send_alert(*search_events[event_code])
             cur.execute("INSERT INTO events VALUES ('%s', 1)" % event_code)
 
     # Events that weren't in the previous search
     for event_code in prev_not_search:
         if event_code in search_events.keys():
+            open_link(*search_events[event_code])
             send_alert(*search_events[event_code])
             cur.execute("UPDATE events SET in_search=1 WHERE event_code='%s'" % event_code)
 
@@ -120,4 +137,6 @@ def search_events():
     cur.close()
 
 if __name__ == '__main__':
-    search_events()
+    while(True):
+        search_events()
+        time.sleep(CHECK_INTERVAL_SECONDS)
