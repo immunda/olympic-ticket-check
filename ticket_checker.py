@@ -75,7 +75,12 @@ def search_events():
         session_meta = str(row.find('td', attrs={'headers': 'session'}))
         # Grab session code
         event_code = session_meta.split('Session Code:')[1].split()[0]
-        print event_code
+        event_page = requests.get(event_url).content
+        event_soup = BeautifulSoup(event_page)
+        ticket_limit = event_soup.find('div', attrs={'class': 'tix_limit_num'}).string
+        if ticket_limit == 0:  # If there's 0 available tickets for event, ignore
+            continue
+        print '%s - %s' % (event_code, event_url)
         search_events[event_code] = (event_datetime, event_url, event_type)
 
     test_events = {
