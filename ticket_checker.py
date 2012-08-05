@@ -78,7 +78,8 @@ def search_events():
         event_page = requests.get(event_url).content
         event_soup = BeautifulSoup(event_page)
         ticket_limit = event_soup.find('div', attrs={'class': 'tix_limit_num'}).string
-        if ticket_limit == 0:  # If there's 0 available tickets for event, ignore
+        can_add_to_basket = event_soup.find('button', attrs={'id': 'add_to_list'})
+        if int(ticket_limit) == 0 or can_add_to_basket is None:  # If there's 0 available tickets for event, ignore
             continue
         print '%s - %s' % (event_code, event_url)
         search_events[event_code] = (event_datetime, event_url, event_type)
