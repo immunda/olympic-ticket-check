@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 
 from local_settings import *
 
+IGNORE_ORBIT_EVENTS = True
 SMTP_HOST = 'localhost'
 #EMAIL_SENDER = ''
 #EMAIL_RECIPIENTS = []
@@ -75,6 +76,8 @@ def search_events():
         session_meta = str(row.find('td', attrs={'headers': 'session'}))
         # Grab session code
         event_code = session_meta.split('Session Code:')[1].split()[0]
+        if event_code.startswith('OB') and IGNORE_ORBIT_EVENTS == True:  # Ignore Orbit events if specified
+            continue
         event_page = requests.get(event_url).content
         event_soup = BeautifulSoup(event_page)
         ticket_limit = event_soup.find('div', attrs={'class': 'tix_limit_num'}).string
